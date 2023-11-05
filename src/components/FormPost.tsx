@@ -1,16 +1,32 @@
 "use client";
 
 import { FormInputPost } from "@/types";
+import { Tag } from "@prisma/client";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { FC } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 
 interface FormPostProps {
   submit: SubmitHandler<FormInputPost>;
   isEditing: boolean;
+  initialValue?: FormInputPost;
 }
 
-const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
-  const { register, handleSubmit } = useForm<FormInputPost>();
+const FormPost: FC<FormPostProps> = ({ submit, isEditing, initialValue }) => {
+  const { register, handleSubmit } = useForm<FormInputPost>({
+    defaultValues: initialValue,
+  });
+
+  //fetch list tags
+  const { data: dataTags, isLoading: isLoadingTags } = useQuery<Tag[]>({
+    queryKey: ["tags"],
+    queryFn: async () => {
+      const response = await axios.get("/api/tags");
+      return response.data;
+    },
+  });
+  console.log(dataTags);
 
   return (
     <form
@@ -28,17 +44,25 @@ const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
         className="textarea textarea-bordered w-full max-w-lg"
         placeholder="Post content"
       ></textarea>
-      <select
-        {...register("tag", { required: true })}
-        className="select select-bordered w-full max-w-lg"
-        defaultValue={""}
-      >
-        <option disabled value="">
-          Options
-        </option>
-        <option>PHP</option>
-        <option>Java</option>
-      </select>
+      {isLoadingTags ? (
+        <span className="loading loading-ring loading-md"></span>
+      ) : (
+        <select
+          {...register("tagId", { required: true })}
+          className="select select-bordered w-full max-w-lg"
+          defaultValue={""}
+        >
+          <option disabled value="">
+            Select tags
+          </option>
+          {dataTags?.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      )}
+
       <button
         type="submit"
         className="btn btn-primary btn-ghost w-full max-w-lg"
